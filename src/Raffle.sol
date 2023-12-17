@@ -26,6 +26,8 @@ pragma solidity ^0.8.18;
 
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import {console} from "forge-std/console.sol";
+
 
 /**
  * @title A sample raffle contract
@@ -59,18 +61,15 @@ contract Raffle is VRFConsumerBaseV2 {
     uint64 private immutable i_subscriptionId;
     uint32 private immutable i_callbackGasLimit;
 
-    address payable[] private s_players;
+    address payable[] private s_players;    
     uint256 private s_lastTimestamp;
     address private s_recentWinner;
     RaffleState private s_raffleState;
 
     //** Events */
-    event EnteredRaffle(
-        address indexed player
-    );
-    event PickedWinner(
-        address indexed winner
-    );
+    event EnteredRaffle(address indexed player);
+    event PickedWinner(address indexed winner);
+    event RequestedRaffleWinner(uint256 indexed requestId);
 
     constructor(uint256 entranceFee, 
                 uint256 interval, 
@@ -109,7 +108,7 @@ contract Raffle is VRFConsumerBaseV2 {
     
     // When is the winner supposed to be picked?
     /**
-     * @dev This is the function that Chailink Automation nodes call toks ee if it's time to perform an upkeep.checkupkeep
+     * @dev This is the function that Chailink Automation nodes call toks see if it's time to perform an upkeep
      * The following should be true for this function to return true:
      *  1. The time interval has passed between raffles
      *  2. The raffle is in the OPEN state
@@ -145,13 +144,14 @@ contract Raffle is VRFConsumerBaseV2 {
         s_raffleState = RaffleState.CALCULATING; // Set state of raffle to calculating
         // 2. Request the RNG tx1 
         // Will revert if subscription is not set and funded.
-        i_vrfCoordinator.requestRandomWords(
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, // gas lane
             i_subscriptionId, // ID with funded LINK
             REQUEST_CONFIRMATIONS, // # of block confirmations required
             i_callbackGasLimit, // max gas limit the callback function can spend
             NUM_WORDS // Number of random numbers requested
         );
+        emit RequestedRaffleWinner(requestId);
     }
 
     // 3. Get a random number from callback function
@@ -188,8 +188,20 @@ contract Raffle is VRFConsumerBaseV2 {
         return s_raffleState;
     }
 
-    function getPlayer(uint256 indexOfPlayer) external view returns(address) {
+    function getPlayer(uint256 indexOfPlayer) external view returns (address) {
         return s_players[indexOfPlayer];
+    }
+
+    function getRecentWinner() external view returns(address) {
+        return s_recentWinner;
+    }
+
+    function getLengthOfPlayers() external view returns(uint256) {
+        return s_players.length;
+    }
+
+    function getLastTimestamp() external view returns(uint256) {
+        return s_lastTimestamp;
     }
 
 }

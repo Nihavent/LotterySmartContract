@@ -18,13 +18,18 @@ contract CreateSubscription is Script {
             , 
             , 
             , 
-            ,) = helperConfig.activeNetworkConfig();
-        return createSubscription(vrfCoordinatior);
+            ,
+            , uint256 deployerKey) = helperConfig.activeNetworkConfig();
+        return createSubscription(vrfCoordinatior, deployerKey);
     }
 
-    function createSubscription(address vrfCoordiantor) public returns (uint64) {
+    function createSubscription(
+            address vrfCoordiantor, 
+            uint256 deployerKey
+        ) 
+        public returns (uint64) {
         console.log("Creating subscription on ChainId: ", block.chainid);
-        vm.startBroadcast();
+        vm.startBroadcast(deployerKey);
         uint64 subId = VRFCoordinatorV2Mock(vrfCoordiantor).createSubscription();
         vm.stopBroadcast();
         console.log("Your subscription ID is: ", subId);
@@ -49,18 +54,27 @@ contract FundSubscription is Script {
                 , 
                 , uint64 subId
                 , 
-                , address link) = helperConfig.activeNetworkConfig();
-        fundSubscription(vrfCoordinatior, subId, link);
+                , address link
+                , uint256 deployerKey) = helperConfig.activeNetworkConfig();
+        fundSubscription(
+            vrfCoordinatior, 
+            subId, 
+            link,
+            deployerKey);
     }
 
-    function fundSubscription(address vrfCoordinator, uint64 subId, address link) public {
+    function fundSubscription(
+            address vrfCoordinator, 
+            uint64 subId, 
+            address link,
+            uint256 deployerKey) public {
         console.log("Funding subscription: ", subId);
         console.log("Using vrfCoordinator: ", vrfCoordinator);
         console.log("On ChainID: ", block.chainid);
 
         //If on Anvil
         if(block.chainid == 31337){
-            vm.startBroadcast();
+            vm.startBroadcast(deployerKey);
             VRFCoordinatorV2Mock(vrfCoordinator).fundSubscription(
                 subId,
                 FUND_AMOUNT
@@ -68,8 +82,15 @@ contract FundSubscription is Script {
             vm.stopBroadcast();
         }
         else {
-            vm.startBroadcast();
-            LinkToken(link).transferAndCall(vrfCoordinator, FUND_AMOUNT, abi.encode(subId));
+            console.log(LinkToken(link).balanceOf(msg.sender));
+            console.log(msg.sender);
+            console.log(LinkToken(link).balanceOf(address(this)));
+            console.log(address(this));
+            vm.startBroadcast(deployerKey);
+            LinkToken(link).transferAndCall(
+                    vrfCoordinator, 
+                    FUND_AMOUNT, 
+                    abi.encode(subId));
             vm.stopBroadcast();
         }
     }
@@ -82,12 +103,18 @@ contract FundSubscription is Script {
 
 contract AddConsumer is Script {
 
-    function addConsumer(address raffle, address vrfCoordinator, uint64 subId) public {
+    function addConsumer(
+        address raffle, 
+        address vrfCoordinator, 
+        uint64 subId, 
+        uint256 deployerKey
+    ) public {
         console.log("Adding consumer contract: ", raffle);
         console.log("Using vrfCoordinator: ", vrfCoordinator);
         console.log("On ChainID: ", block.chainid);
+        console.log("SubId: ", subId);
 
-        vm.startBroadcast();
+        vm.startBroadcast(deployerKey); // Start broadcast from deployer account
         VRFCoordinatorV2Mock(vrfCoordinator).addConsumer(subId, raffle);
         vm.stopBroadcast();
     }
@@ -100,8 +127,12 @@ contract AddConsumer is Script {
                 , 
                 , uint64 subId
                 , 
-                , ) = helperConfig.activeNetworkConfig();
-        addConsumer(raffle, vrfCoordinator, subId);
+                , 
+                , uint256 deployerKey) = helperConfig.activeNetworkConfig();
+        addConsumer(raffle, 
+                    vrfCoordinator, 
+                    subId, 
+                    deployerKey);
 
     }
 
